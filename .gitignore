@@ -67,3 +67,5 @@ include/
 .idea/
 .project
 .pydevproject
+pip
+pip-selfcheck.json
