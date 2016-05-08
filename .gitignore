@@ -62,6 +62,8 @@ target/
 .ipynb_checkpoints
 
 #eclipse/pydev/virtualenv
-.bin/
+bin/
+include/
+.idea/
 .project
 .pydevproject
