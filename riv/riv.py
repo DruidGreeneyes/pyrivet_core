@@ -11,7 +11,7 @@ Created on 7 May 2016
 
 import itertools as IT
 
-from labels.vector_element import VectorElement as V
+from riv.vector_element import VectorElement as V
 from util import find_where
 from multipledispatch import dispatch
 
@@ -41,8 +41,8 @@ class RIV(object):
         return self.__contains__(v_elt['index'])
 
     def __get_point__(self, index):
-        if 0 < index < len(self):
-            return find_where(lambda v: v.index() == index,
+        if 0 <= index < len(self):
+            return find_where(lambda v: v['index'] == index,
                               self.points(),
                               V.from_index(index))
         else:

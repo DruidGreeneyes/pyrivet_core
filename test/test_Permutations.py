@@ -1,14 +1,15 @@
 from unittest import TestCase
-from labels.riv import RIV
-from vectorpermutations import Permutations
+
+from riv.riv import RIV as R
+from riv.vec_perms import Permutations as P
 
 
 class TestPermutations(TestCase):
 
     def test_permutation(self):
         size = 10
-        permutations = Permutations.generate(size)
-        test_riv = RIV.from_sets(size, (4, 10), (1, -1))
+        permutations = P.generate(size)
+        test_riv = R.from_sets(size, (4, 10), (1, -1))
         test_riv_plus = test_riv.permute(permutations, 3)
         test_riv_minus = test_riv.permute(permutations, -3)
         self.assertNotEqual(test_riv, test_riv_plus)

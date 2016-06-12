@@ -1,8 +1,9 @@
-from unittest import TestCase
-from vectorpermutations import Permutations as P
-from labels.riv import RIV as R
-from labels.vector_element import VectorElement as V
 from math import sqrt
+from unittest import TestCase
+
+from riv.riv import RIV as R
+from riv.vec_perms import Permutations as P
+from riv.vector_element import VectorElement as V
 
 
 class TestRIV(TestCase):

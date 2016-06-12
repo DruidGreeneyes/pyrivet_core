@@ -4,8 +4,8 @@ Created on 7 May 2016
 @author: josh
 '''
 
-import labels.riv as vector
-import vectorpermutations as permutations
+from riv.riv import RIV as R
+from riv.vec_perms import Permutations as P
 from random import random
 
 
@@ -39,10 +39,10 @@ def _generate_indices(bound, count, token):
 
 
 def generate_riv(size, nnz, token):
-    return vector.from_sets(size,
-                            _generate_indices(size, nnz, token),
-                            _generate_vals(nnz, token))
+    return R.from_sets(size,
+                       _generate_indices(size, nnz, token),
+                       _generate_vals(nnz, token))
 
 
 def generate_permutations (size):
-    return permutations.generate(size)
+    return P.generate(size)
