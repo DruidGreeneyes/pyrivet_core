@@ -22,9 +22,9 @@ class Permutations(object):
                              "'permute' and 'invert'.\n"
                              "You asked for: {}".format(index))
 
-
-def generate(size):
-    random.seed(0)
-    permutation = random.shuffle(range(size))
-    inverse = (i for i, __ in sorted(enumerate(permutation), key=lambda e: e[1]))
-    return Permutations(permutation, inverse)
+    @staticmethod
+    def generate(size):
+        random.seed(0)
+        permutation = random.shuffle(range(size))
+        inverse = (i for i, __ in sorted(enumerate(permutation), key=lambda e: e[1]))
+        return Permutations(permutation, inverse)

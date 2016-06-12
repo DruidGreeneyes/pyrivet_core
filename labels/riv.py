@@ -9,40 +9,42 @@ Created on 7 May 2016
 # used to represent a compressed sparse vector.
 # indices whose value is zero don't exist.
 
-import labels.vector_element as vec_elt
+import itertools as IT
+
+from labels.vector_element import VectorElement as V
 from util import find_where
 from multipledispatch import dispatch
 
 
 class RIV(object):
 
-    __slots__ = ['parts']
+    __slots__ = ['_parts']
 
     def __init__(self, size, points):
-        self.parts = (size, tuple(points))
+        self._parts = (size, tuple(points))
 
     def __str__(self):
-        return "{};{}".format(" ".join(map(str, self.points())), self.size)
+        return "{};{}".format(" ".join(map(str, self.points())), len(self))
 
     def __len__(self):
-        return len(self.points())
+        return self._parts[0]
     
     def __eq__(self, riv):
-        return self.size() == riv.size() and self.points() == riv.points()
+        return len(self) == riv.size() and self.points() == riv.points()
     
     @dispatch(int)
     def __contains__(self, index):
         return index in self.keys()
 
-    @dispatch(vec_elt.VectorElement)
+    @dispatch(V)
     def __contains__(self, v_elt):
         return self.__contains__(v_elt['index'])
 
     def __get_point__(self, index):
-        if 0 < index < self.size():
+        if 0 < index < len(self):
             return find_where(lambda v: v.index() == index,
                               self.points(),
-                              vec_elt.from_index(index))
+                              V.from_index(index))
         else:
             raise IndexError("Index is beyond the scope of this riv: {}".format(index))
 
@@ -50,38 +52,38 @@ class RIV(object):
     def __getitem__(self, index):
         return self.__get_point__(index)['value']
 
-    @dispatch(vec_elt.VectorElement)
+    @dispatch(V)
     def __getitem__(self, v_elt):
-        return self.__getitem__(v_elt['index'])
+        return self[(v_elt['index'])]
     
     def __iter__(self): return iter(self.points())
 
     def __add__(self, riv):
-        pointsb = map(lambda v:
-                        v + self[v.__index__()]
-                        if v['index'] in self
-                        else v,
-                      riv.points())
-        return make(self.size(),
-                    set(self.points()).difference(pointsb).union(pointsb)).remove_zeros()
+        adds = map(lambda v: self[v] + riv[v],
+                   frozenset(self.points()).intersection(riv.points()))
+        others = frozenset(self.points()).symmetric_difference(riv.points())
+        return RIV.make(len(self),
+                        IT.chain(filter(lambda v: v.is_not_zero(),
+                                        adds),
+                                 others))
 
     def __neg__(self):
-        return make(self.size(),
-                    (-v for v in self))
+        return RIV.make(len(self),
+                        (-v for v in self))
 
     def __sub__(self, riv): return self + -riv
 
     def __mul__(self, scalar):
-        return make(self.size(),
-                    (v * scalar for v in self))
+        return RIV.make(len(self),
+                        (v * scalar for v in self))
 
     def __truediv__(self, scalar):
-        return make(self.size(),
-                    (v / scalar for v in self))
+        return RIV.make(len(self),
+                        (v / scalar for v in self))
 
-    def size(self): return self.parts[0]
+    def count(self): return self._parts[0]
 
-    def points(self): return self.parts[1]
+    def points(self): return self._parts[1]
 
     def keys(self): return (v['index'] for v in self)
 
@@ -90,17 +92,18 @@ class RIV(object):
     @dispatch(int)
     def get_point(self, index): return self.__get_point__(index)
 
-    @dispatch(vec_elt.VectorElement)
+    @dispatch(V)
     def get_point(self, v_elt): return self.get_point(v_elt['index'])
 
     def remove_zeros(self):
-        return make(self.size(),
-                    (v for v in self if v['value'] != 0))
+        return RIV.make(len(self),
+                        filter(lambda v: v.is_not_zero(),
+                               self.points()))
 
     def magnitude(self):
         return sum(i * i for i in self.vals()) ** 0.5
 
-    def normalize(self): return self / self.magnitude()
+    def normalize(self): return self.__truediv__(self.magnitude())
 
     def permute(self, permutations, times):
         if not times:
@@ -110,25 +113,25 @@ class RIV(object):
             p = 0 if times > 0 else 1
             for __ in range(abs(times)):
                 keys = [permutations[p][i] for i in keys]
-            return from_sets(self.size(), keys, self.vals())
+            return RIV.from_sets(len(self), keys, self.vals())
 
+    @staticmethod
+    def make(size, points): return RIV(size, points)
 
-def make(size, points): return RIV(size, points)
+    @staticmethod
+    def empty(size): return RIV.make(size, ())
 
+    @staticmethod
+    def from_sets(size, indices, values):
+        l = len(indices)
+        if l == len(values):
+            return RIV.make(size,
+                            map(lambda x: V.make(indices[x], values[x]),
+                                range(l)))
+        else:
+            raise IndexError("Set lengths do not match: {} != {}".format(l, len(values)))
 
-def empty(size): return make(size, ())
-
-
-def from_sets(size, indices, values):
-    l = len(indices)
-    if l == len(values):
-        return make(size,
-                    map(lambda x: vec_elt.make(indices[x], values[x]),
-                        range(l)))
-    else:
-        raise IndexError("Set lengths do not match: {} != {}".format(l, len(values)))
-
-
-def from_str(string):
-    points_string, size = string.split(";")
-    return make(size, map(vec_elt.from_str, points_string.split(" ")))
+    @staticmethod
+    def from_str(string):
+        points_string, size = string.split(";")
+        return RIV.make(size, map(V.from_str, points_string.split(" ")))
