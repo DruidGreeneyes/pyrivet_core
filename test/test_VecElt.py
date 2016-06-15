@@ -4,7 +4,7 @@ from riv.vector_element import VectorElement as V
 import pytest
 
 
-class TestVelt(TestCase):
+class T(TestCase):
 
     def test_make(self):
         assert "4|1.0" == str(V.make(4, 1))

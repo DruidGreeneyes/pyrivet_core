@@ -1,143 +1,173 @@
 from math import sqrt
-from unittest import TestCase
 
 from riv.riv import RIV as R
 from riv.vec_perms import Permutations as P
 from riv.vector_element import VectorElement as V
+import pytest
+import functools
+import random
 
 
-class TestRIV(TestCase):
-    test_sz = 10
-    test_is = (4, 0)
-    test_vs = (1, -1)
+def test_riv():
+    test_key_a = 4
+    test_key_b = 0
+    test_val_a = 1
+    test_val_b = -1
+    test_size = 100
+    test_elt_a = V.make(test_key_a, test_val_a)
+    test_elt_b = V.make(test_key_b, test_val_b)
+    test_points = tuple(sorted((test_elt_a, test_elt_b)))
+    test_is = tuple(p['index'] for p in test_points)
+    test_vs = tuple(p['value'] for p in test_points)
+    test_str = "{};{}".format(" ".join(map(str, sorted(test_points))),
+                              test_size)
+    test_perms = P.generate(test_size)
+    test_permutation_factor = random.Random().randint(-10000, 10000)
 
-    def test_make(self):
-        riv = R.make(TestRIV.test_sz,
-                     (V.make(4, 1), V.make(10, -1)))
-        self.assertEqual("4|1.0 10|-1.0;10", str(riv))
+    def generate_bad_key():
+        return random.Random().choice(
+            [i for i in range(test_size) if i not in test_is])
+    bad_key = generate_bad_key()
+    bad_elt = V.make(generate_bad_key(),
+                     random.Random().randint(-10000, 10000))
 
-    def test__len(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(2, len(riv))
+    points_riv = R.make(test_size, test_points)
+    assert test_str == str(points_riv), \
+        ("RIV.make() or RIV.__str__() seems to have failed. These two should be equal:\n"
+         "{} != {}").format(test_str, points_riv)
 
-    def test__mult(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual("4|2 10|-2;10", str(riv * 2))
+    def make_test_riv(inc=1):
+        # Genrate a quick test riv where the vals are all inc or -inc
+        return R.from_sets(test_size,
+                           test_is,
+                           [v * inc for v in test_vs])
 
-    def test__eq(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(True, riv == TestRIV.make_test_riv())
-        self.assertEqual(False, riv * 2 == TestRIV.make_test_riv())
+    test_riv_1 = make_test_riv(1)
+    assert points_riv == test_riv_1, \
+        ("RIV.from_sets() has failed. These two should be equal:\n"
+         "{} != {}").format(points_riv, test_riv_1)
 
-    def test__contains_int(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(True, 4 in riv)
-        self.assertEqual(False, 6 in riv)
+    assert test_size == len(test_riv_1), \
+        ("RIV.__len__() has failed. These two should be equal:\n"
+         "{} != {}").format(test_size, len(test_riv_1))
 
-    def test__contains_velt(self):
-        riv = TestRIV.make_test_riv()
-        velta = V.make(4, 1)
-        veltb = V.make(6, 0)
-        self.assertEqual(True, velta in riv)
-        self.assertEqual(False, veltb in riv)
+    test_riv_2 = make_test_riv(2)
+    assert test_riv_1 == test_riv_1, \
+        "RIV.__eq__() has failed. test_riv_1 should be == to itself."
+    assert not test_riv_1 == test_riv_2, \
+        "RIV.__eq__() has failed. test_riv_1 should not be == to test_riv_2"
 
-    def test_get_point(self):
-        riv = TestRIV.make_test_riv()
-        vec = V.make(4, 1)
-        self.assertEqual(vec, riv.__get_point__(4))
+    assert test_riv_2 == test_riv_1 * 2, \
+        ("RIV.__mult__() has failed. These two should be equal:"
+         "{} != {}").format(test_riv_2, test_riv_1 * 2)
 
-    def test__get_item_int(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(1, riv[4])
-        self.assertEqual(0, riv[6])
+    assert (test_key_a in test_riv_1 and
+            test_elt_a in test_riv_1), \
+        ("RIV.__contains__() has failed.\n"
+         "{}  and {} should be in {}").format(test_key_a, test_elt_a, test_riv_1)
 
-    def test__get_item_velt(self):
-        riv = TestRIV.make_test_riv()
-        velta = V.make(4, 1)
-        veltb = V.make(6, 2)
-        self.assertEqual(1, riv[velta])
-        self.assertEqual(0, riv[veltb])
+    assert (bad_key not in test_riv_1 and
+            bad_elt not in test_riv_1), \
+        ("RIV.__contains__() has failed.\n"
+         "{} and {} should not be in {}").format(bad_key, bad_elt, test_riv_1)
 
-    def test__add(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(riv * 2, riv + riv)
+    assert test_val_a == test_riv_1[test_key_a]['value'], \
+        ("RIV.__getitem__() has failed.\n"
+         "{}[{}]['value]' should be {}").format(test_riv_1, test_key_a, test_val_a)
+    assert 0 == test_riv_1[bad_key]['value'], \
+        ("RIV.__getitem__() has failed.\n"
+         "{}[{}]['value]' should be 0").format(test_riv_1, bad_key)
+    assert test_val_a == test_riv_1[test_elt_a]['value'], \
+        ("RIV.__getitem__() has failed.\n"
+         "{}[{}]['value]' should be {}").format(test_riv_1, test_elt_a, test_val_a)
+    assert 0 == test_riv_1[bad_elt]['value'], \
+        ("RIV.__getitem__() has failed.\n"
+         "{}[{}]['value]' should be 0").format(test_riv_1, bad_elt)
 
-    def test__neg(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(riv * -1, -riv)
+    assert test_riv_1 + test_riv_1 == test_riv_1 * 2, \
+        ("RIV.__add__() has failed.\n"
+         "{} + itself should be equal to {}").format(test_riv_1, test_riv_1 * 2)
 
-    def test__sub(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(riv * 0, riv - riv)
+    assert test_riv_1 * -1 == -test_riv_1, \
+        ("RIV.__neg__() has failed.\n"
+         "{} negated should be equal to {}").format(test_riv_1, test_riv_1 * -1)
 
-    def test__truediv(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(riv * 0.5, riv / 2)
+    assert test_riv_1 * 0 == test_riv_1 - test_riv_1, \
+        ("RIV.__sub__() has failed.\n"
+         "{} minus itself should be equal to {}").format(test_riv_1, test_riv_1 * 0)
 
-    def test_from_sets(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(
-            R.make(
-                TestRIV.test_sz,
-                (V.make(4, 1), V.make(10, -1))),
-            riv)
+    assert test_riv_1 * 0.5 == test_riv_1 / 2, \
+        ("RIV.__truediv__() has failed.\n"
+         "{} / 2 should be equal to {}").format(test_riv_1, test_riv_1 * 0.5)
 
-    def test_size(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(riv.size(), 10)
+    assert test_points == test_riv_1.points(), \
+        ("RIV.points() has failed.\n"
+         "{}.points() should be equal to {}").format(test_riv_1, test_points)
 
-    def test_points(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(
-            (V.make(4, 1), V.make(10, -1)),
-            riv.points())
+    assert test_is == test_riv_1.keys(), \
+        ("RIV.keys() has failed.\n"
+         "{}.keys() should be equal to {}").format(test_riv_1, test_is)
 
-    def test_keys(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual((4, 10), riv.keys())
+    assert test_vs == test_riv_1.vals(), \
+        ("RIV.vals() has failed.\n"
+         "{}.vals() should be equal to {}").format(test_riv_1, test_vs)
 
-    def test_vals(self):
-        riv = TestRIV.make_test_riv()
-        self.assertNotEqual((1, -1), riv.vals())
+    test_riv_zeros = R.from_sets(100, (4, 6, 0), (1, 0, -1))
+    assert test_riv_1 == test_riv_zeros.remove_zeros(), \
+        ("RIV.remove_zeros has failed.\n"
+         "{}.remove_zeros() should be equal to {}").format(test_riv_zeros, test_riv_1)
 
-    def test_get_point_int(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(V.make(4, 1), riv.get_point(4))
-        self.assertEqual(V.make(6, 0), riv.get_point(6))
+    mag = sum(i ** 2 for i in test_vs) ** 0.5
+    assert mag == test_riv_1.magnitude(), \
+        ("RIV.magnitude() has failed.\n"
+         "{}.magnitude() should be equal to {}").format(test_riv_1, mag)
 
-    def test_get_point_velt(self):
-        riv = TestRIV.make_test_riv()
-        velt = V.make(4, 1)
-        velt_2 = V.make(6, 1)
-        self.assertEqual(velt, riv.get_point(velt))
-        self.assertNotEqual(velt_2, riv.get_point(velt_2))
-
-    def test_remove_zeros(self):
-        riv = TestRIV.make_test_riv()
-        riv_2 = R.from_sets(10, (4, 6, 10), (1, 0, -1))
-        self.assertEqual(riv, riv_2.remove_zeros())
-
-    def test_magnitude(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(sqrt(2), riv.magnitude())
-
-    def test_normalize(self):
-        riv = TestRIV.make_test_riv()
-        self.assertEqual(1, riv.normalize().magnitude())
-
-    def test_permute(self):
-        perms = P.generate(10)
-        riv = TestRIV.make_test_riv()
-        riv_plus = riv.permute(perms, 3)
-        riv_minus = riv.permute(perms, -3)
-        self.assertNotEqual(riv,riv_plus)
-        self.assertNotEqual(riv,riv_minus)
-        self.assertNotEqual(riv_plus,riv_minus)
-        self.assertEqual(riv,riv_plus.permute(perms, -3))
-        self.assertEqual(riv,riv_minus.permute(perms, 3))
-
-    @staticmethod
-    def make_test_riv():
-        return R.from_sets(TestRIV.test_sz,
-                           TestRIV.test_is,
-                           TestRIV.test_vs)
+    assert 1 == round(test_riv_1.normalize().magnitude(), 0), \
+        ("RIV.normalize() has failed.\n"
+         "{}.normalize() should have magnitude 1").format(test_riv_1)
+    test_riv_plus = test_riv_1.permute(test_perms, test_permutation_factor)
+    test_riv_minus = test_riv_1.permute(test_perms, -test_permutation_factor)
+    assert test_riv_1 != test_riv_plus, \
+        ("RIV.permute() has failed.\n"
+         "A positive permutation of a riv should not be equal to the riv itself.\n"
+         "{} == {}\n"
+         "Try with different values or find a new random.").format(test_riv_1, test_riv_plus)
+    assert test_riv_1 != test_riv_minus, \
+        ("RIV.permute() has failed.\n"
+         "A negative permutation of a riv should not be equal to the riv itself.\n"
+         "{} == {}\n"
+         "Try with different values or find a new random.").format(test_riv_1, test_riv_minus)
+    assert test_riv_plus != test_riv_minus, \
+        ("RIV.permute() has failed.\n"
+         "A negative permutation should not be equal to the positive permuation of the same riv.\n"
+         "{} == {}\n"
+         "Try with different values or find a new random.").format(test_riv_plus, test_riv_minus)
+    assert test_riv_1 == test_riv_plus.permute(test_perms, -test_permutation_factor), \
+        ("RIV.permute() has failed.\n"
+         "A positive permutation should reverse to the original riv.\n"
+         "{} != {}\n"
+         "Try with different values or find a new random.").format(test_riv_1,
+                                                                   test_riv_plus.permute(test_perms,
+                                                                                         -test_permutation_factor))
+    assert test_riv_1 == test_riv_minus.permute(test_perms, test_permutation_factor), \
+        ("RIV.permute() has failed.\n"
+         "A negative permutation should reverse to the original riv.\n"
+         "{} != {}\n"
+         "Try with different values or find a new random.").format(test_riv_1,
+                                                                   test_riv_plus.permute(test_perms,
+                                                                                         test_permutation_factor))
+    test_nnz = test_size // 10 % 2
+    test_riv_gen_1 = R.generate_riv(test_size, test_nnz, "token1")
+    test_riv_gen_2 = R.generate_riv(test_size, test_nnz, "token2")
+    assert test_riv_gen_1 == R.generate_riv(test_size, test_nnz, "token1"), \
+        ("RIV.generate_riv() has failed.\n"
+         "Given identical inputs, it should produce the same results every time."
+         "{} should be equal to {}.").format(test_riv_gen_1, R.generate_riv(test_size, test_nnz, "token1"))
+    assert test_riv_gen_2 == R.generate_riv(test_size, test_nnz, "token2"), \
+        ("RIV.generate_riv() has failed.\n"
+         "Given identical inputs, it should produce the same results every time."
+         "{} should be equal to {}.").format(test_riv_gen_2, R.generate_riv(test_size, test_nnz, "token2"))
+    assert test_riv_gen_1 != test_riv_gen_2, \
+        ("RIV.generate_riv() has failed.\n"
+         "Two different tokens should produce different RIVs."
+         "{} should not be equal to {}.").format(test_riv_gen_1, test_riv_gen_2)

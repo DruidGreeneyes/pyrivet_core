@@ -4,7 +4,7 @@ Created on 7 May 2016
 @author: josh
 '''
 
-from random import random
+import random
 
 
 class Permutations(object):
@@ -22,9 +22,14 @@ class Permutations(object):
                              "'permute' and 'invert'.\n"
                              "You asked for: {}".format(index))
 
+    def __str__(self):
+        return "permute: {}\ninverse: {}".format(self['permute'], self['invert'])
+
     @staticmethod
     def generate(size):
-        random.seed(0)
-        permutation = random.shuffle(range(size))
-        inverse = (i for i, __ in sorted(enumerate(permutation), key=lambda e: e[1]))
+        r = random.Random()
+        r.seed(0)
+        permutation = list(range(size))
+        r.shuffle(permutation)
+        inverse = [e[0] for e in sorted(enumerate(permutation), key=lambda i: i[1])]
         return Permutations(permutation, inverse)

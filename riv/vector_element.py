@@ -12,10 +12,10 @@ from multipledispatch import dispatch
 
 class VectorElement(object):
     __slots__ = ['_point']
-    
+
     def __init__(self, index, value):
         self._point = (int(index), float(value))
-        
+
     def __getitem__(self, part):
         if part == 'index' or part == 0: return self._point[0]
         elif part == 'value' or part == 1: return self._point[1]
@@ -77,8 +77,8 @@ class VectorElement(object):
             return self >= v_elt['index']
 
     def __str__(self):
-        return "{}|{}".format(self['index'], self['value'])
-    
+        return "|".join(map(str, self._point))
+
     def __repr__(self):
         return str(self)
 

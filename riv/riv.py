@@ -9,28 +9,37 @@ Created on 7 May 2016
 # used to represent a compressed sparse vector.
 # indices whose value is zero don't exist.
 
-import itertools as IT
-
 from riv.vector_element import VectorElement as V
+import functools as FT
+import itertools as IT
 from util import find_where
 from multipledispatch import dispatch
+import random
 
 
 class RIV(object):
 
-    __slots__ = ['_parts']
-
     def __init__(self, size, points):
-        self._parts = (size, tuple(points))
+        self._parts = (int(size), tuple(sorted(points)))
 
     def __str__(self):
-        return "{};{}".format(" ".join(map(str, self.points())), len(self))
+        return "{};{}".format(" ".join(map(str, self.remove_zeros())),
+                              len(self))
 
     def __len__(self):
         return self._parts[0]
     
     def __eq__(self, riv):
-        return len(self) == riv.size() and self.points() == riv.points()
+        if self is riv:
+            return True
+        elif len(self) == len(riv):
+            if (False not in
+                    (self[v].strict_equals(riv[v]) for v in set(self).union(riv))):
+                return True
+        return False
+
+    def __ne__(self, riv):
+        return not self == riv
     
     @dispatch(int)
     def __contains__(self, index):
@@ -40,17 +49,14 @@ class RIV(object):
     def __contains__(self, v_elt):
         return self.__contains__(v_elt['index'])
 
-    def __get_point__(self, index):
-        if 0 <= index < len(self):
-            return find_where(lambda v: v['index'] == index,
-                              self.points(),
-                              V.from_index(index))
-        else:
-            raise IndexError("Index is beyond the scope of this riv: {}".format(index))
-
     @dispatch(int)
     def __getitem__(self, index):
-        return self.__get_point__(index)['value']
+        if 0 <= index < len(self):
+            return find_where(lambda v: v == index,
+                              self,
+                              V.partial(index))
+        else:
+            raise IndexError("Index is beyond the scope of this riv: {}".format(index))
 
     @dispatch(V)
     def __getitem__(self, v_elt):
@@ -59,13 +65,12 @@ class RIV(object):
     def __iter__(self): return iter(self.points())
 
     def __add__(self, riv):
-        adds = map(lambda v: self[v] + riv[v],
-                   frozenset(self.points()).intersection(riv.points()))
-        others = frozenset(self.points()).symmetric_difference(riv.points())
-        return RIV.make(len(self),
-                        IT.chain(filter(lambda v: v.is_not_zero(),
-                                        adds),
-                                 others))
+        if len(self) != len(riv):
+            raise IndexError("Cannot add or subtract rivs of different sizes:\n"
+                             "self: {} != riv: {}".format(len(self), len(riv)))
+        points = (self[v] + riv[v] if (v in self and v in riv) else v
+                  for v in set(self).union(riv))
+        return RIV.make(len(self), points)
 
     def __neg__(self):
         return RIV.make(len(self),
@@ -81,24 +86,25 @@ class RIV(object):
         return RIV.make(len(self),
                         (v / scalar for v in self))
 
-    def count(self): return self._parts[0]
-
     def points(self): return self._parts[1]
 
-    def keys(self): return (v['index'] for v in self)
+    def count(self):
+        return len(self.remove_zeros().points())
 
-    def vals(self): return (v['value'] for v in self)
+    def keys(self): return tuple(v['index'] for v in self)
+
+    def vals(self): return tuple(v['value'] for v in self)
 
     @dispatch(int)
-    def get_point(self, index): return self.__get_point__(index)
+    def get_point(self, index): return self[index]
 
     @dispatch(V)
-    def get_point(self, v_elt): return self.get_point(v_elt['index'])
+    def get_point(self, v_elt): return self[v_elt]
 
     def remove_zeros(self):
         return RIV.make(len(self),
-                        filter(lambda v: v.is_not_zero(),
-                               self.points()))
+                        filter(lambda v: v.not_zero(),
+                               self))
 
     def magnitude(self):
         return sum(i * i for i in self.vals()) ** 0.5
@@ -106,14 +112,15 @@ class RIV(object):
     def normalize(self): return self.__truediv__(self.magnitude())
 
     def permute(self, permutations, times):
-        if not times:
-            return self
-        else:
-            keys = self.keys()
-            p = 0 if times > 0 else 1
-            for __ in range(abs(times)):
-                keys = [permutations[p][i] for i in keys]
-            return RIV.from_sets(len(self), keys, self.vals())
+        def permute_keys(keys, permutation):
+            return [permutation[k] for k in keys]
+        perm = (permutations['permute'] if times > 0
+                else permutations['invert'])
+        new_keys = FT.reduce(
+            lambda ks, __: permute_keys(ks, perm),
+            range(abs(times)),
+            self.keys())
+        return RIV.from_sets(len(self), new_keys, self.vals())
 
     @staticmethod
     def make(size, points): return RIV(size, points)
@@ -134,4 +141,28 @@ class RIV(object):
     @staticmethod
     def from_str(string):
         points_string, size = string.split(";")
-        return RIV.make(size, map(V.from_str, points_string.split(" ")))
+        return RIV.make(size, [V.from_str(s) for s in points_string.split(" ")])
+
+    @staticmethod
+    def _make_values(rand, count):
+        vals = FT.reduce(lambda i, x: i + x,
+                         IT.repeat([1, -1], count // 2))
+
+        rand.shuffle(vals)
+        return tuple(vals)
+
+    @staticmethod
+    def _make_indices(rand, size, count):
+        inds = set()
+        while len(inds) < count:
+            inds.add(rand.randint(0, size - 1))
+        return tuple(inds)
+
+    @staticmethod
+    def generate_riv(size, nnz, token):
+        assert nnz % 2 == 0, "nnz must be even, otherwise num -1s != num 1s"
+        r = random.Random()
+        r.seed(token)
+        return RIV.from_sets(size,
+                             RIV._make_indices(r, size, nnz),
+                             RIV._make_values(r, nnz))
