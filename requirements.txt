@@ -1,4 +1,6 @@
-multipledispatch==0.4.8
+multipledispatch
 pytest
-numpy
-scipy
+tinydb
+tinyrecord
+tinydb_serialization
+ujson

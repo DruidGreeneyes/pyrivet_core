@@ -1,6 +1,7 @@
 import itertools
 import functools
 import random
+import ujson
 
 
 def _make_values(rand, count):
@@ -25,12 +26,6 @@ def generate_riv(size, nnz, token, rand=None):
     values = _make_values(r, nnz)
     return RIV.from_sets(size, indices, values)
 
-
-def _str_item(dict_item):
-    k, v = dict_item
-    return "{}|{}".format(k, v)
-
-
 class RIV(dict):
 
     def __init__(self, size, riv):
@@ -38,9 +33,7 @@ class RIV(dict):
         self._size = int(size)
 
     def __str__(self):
-        points = sorted(self.items())
-        points = map(_str_item, points)
-        return "{};{}".format(" ".join(points), self._size)
+        return ujson.dumps((self._size, self))
 
     def __len__(self):
         return self._size
@@ -148,11 +141,13 @@ class RIV(dict):
         return RIV(size, dict())
 
     @staticmethod
+    def to_str(riv):
+        return str(riv)
+
+    @staticmethod
     def from_str(string):
-        points, size = string.split(";")
-        points = points.split(" ")
-        points = [p.split("|") for p in points]
-        points = [(int(k), int(v)) for [k, v] in points]
+        size, points = ujson.loads(string)
+        points = dict((int(k), v) for k, v in points.items())
         return RIV.make(size, points)
 
     @staticmethod
