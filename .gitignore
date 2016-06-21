@@ -69,3 +69,6 @@ include/
 .pydevproject
 pip
 pip-selfcheck.json
+
+# db stuff
+dbs/

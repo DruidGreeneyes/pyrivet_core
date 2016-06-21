@@ -6,14 +6,18 @@ from tinydb_serialization import Serializer
 class RIVSerializer(Serializer):
     OBJ_CLASS = RIV
 
-    encode = RIV.to_str
+    def encode(self, obj):
+        return RIV.to_str(obj)
 
-    decode = RIV.from_str
+    def decode(self, string):
+        return RIV.from_str(string)
 
 
 class PermutationSerializer(Serializer):
     OBJ_CLASS = Perms
 
-    encode = Perms.to_str
+    def encode(self, obj):
+        return Perms.to_str(obj)
 
-    decode = Perms.from_str
+    def decode(self, string):
+        return Perms.from_str(string)

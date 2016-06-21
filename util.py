@@ -4,6 +4,9 @@ Created on 7 May 2016
 @author: josh
 '''
 
+from datetime import datetime, timedelta
+import functools
+
 
 def find(item, coll, default):
     return next(iter(filter(lambda x: x == item, coll)), default)
@@ -32,3 +35,19 @@ def find_index(item, sorted_coll):
 
 def find_where(predicate, col, default):
     return next(iter(filter(predicate, col)), default)
+
+
+def cached_function(func):
+    def invalidate(obj):
+        obj.invalid = True
+
+    def cache_wrapper(*args, **kwargs):
+        if cache_wrapper.invalid:
+            cache_wrapper.cache = func(*args, **kwargs)
+            cache_wrapper.invalid = False
+        return cache_wrapper.cache
+
+    cache_wrapper.invalid = True
+    cache_wrapper.cache = None
+    cache_wrapper.invalidate = functools.partial(invalidate, cache_wrapper)
+    return cache_wrapper

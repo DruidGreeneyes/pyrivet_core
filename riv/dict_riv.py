@@ -27,7 +27,6 @@ def generate_riv(size, nnz, token, rand=None):
     return RIV.from_sets(size, indices, values)
 
 class RIV(dict):
-
     def __init__(self, size, riv):
         super(RIV, self).__init__(riv)
         self._size = int(size)
@@ -44,13 +43,8 @@ class RIV(dict):
     def __ne__(self, riv):
         return not self == riv
 
-    def __getitem__(self, index):
-        if 0 <= index < self._size:
-            return super(RIV, self).__getitem__(index)
-        else:
-            raise IndexError("Index is beyond the scope of this riv: {}".format(index))
-
-    def __missing__(self, __):
+    def __missing__(self, index):
+        self[index] = 0
         return 0
 
     def __add__(self, riv):
@@ -63,12 +57,22 @@ class RIV(dict):
             new[i] += v
         return new
 
+    def __iadd__(self, riv):
+        for (k, v) in riv.items():
+            self[k] += v
+        return self
+
     def __neg__(self):
         return RIV.make(self._size,
                         [(k, -v) for (k, v) in self.items()])
 
     def __sub__(self, riv):
         return self + -riv
+
+    def __isub__(self, riv):
+        for (k, v) in riv.items():
+            self[k] -= v
+        return self
 
     def __mul__(self, scalar):
         return RIV.make(self._size,
@@ -83,22 +87,6 @@ class RIV(dict):
 
     def vals(self):
         return tuple(super(RIV, self).values())
-
-    def destructive_add(self, riv):
-        if self._size != riv._size:
-            raise IndexError("Cannot add or subtract rivs of different sizes:\n"
-                             "self: {} != riv: {}".format(self._size, riv._size))
-        for (k, v) in riv.items():
-            self[k] += v
-        return self
-
-    def destructive_subtract(self, riv):
-        if self._size != riv._size:
-            raise IndexError("Cannot add or subtract rivs of different sizes:\n"
-                             "self: {} != riv: {}".format(self._size, riv._size))
-        for (k, v) in riv.items():
-            self[k] -= v
-        return self
 
     def count(self):
         return super(RIV, self).__len__()
@@ -115,16 +103,17 @@ class RIV(dict):
 
     def normalize(self):
         mag = self.magnitude()
-        return self.__truediv__(mag)
+        return self / mag
 
     def permute(self, permutations, times):
         def permute_keys(keys, permutation):
             return [permutation[k] for k in keys]
+        if times == 0: return self
         perm = (permutations['permute'] if times > 0
                 else permutations['invert'])
         keys = tuple(self.keys())
         new_keys = functools.reduce(lambda ks, __: permute_keys(ks, perm),
-                                    range(abs(times)),
+                                    range(+times),
                                     keys)
         return RIV.from_sets(len(self), new_keys, self.values())
 
@@ -151,11 +140,18 @@ class RIV(dict):
         return RIV.make(size, points)
 
     @staticmethod
-    def sum_rivs(*rivs, size=None):
-        t_rivs = tuple(rivs)
-        size = size if size else len(t_rivs[0])
-        empty_riv = RIV.empty(size)
-        res = functools.reduce(lambda i, v: i.destructive_add(v),
-                               t_rivs,
-                               empty_riv)
+    def sum(*rivs, size=None):
+        size = size if size else len(rivs[0])
+        res = RIV.empty(size)
+        for riv in rivs:
+            res += riv
+#        empty_riv = RIV.empty(size)
+#        res = functools.reduce(lambda i, v: i + v,
+#                               rivs,
+#                               empty_riv)
         return res
+
+    @staticmethod
+    def dot_product(riva, rivb):
+        res = [riva[i] * rivb[i] for i in riva if i in rivb]
+        return sum(res, 0.0)
