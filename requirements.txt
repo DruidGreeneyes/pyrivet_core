@@ -1,9 +1,7 @@
 pytest
 numpy
-pandas
 scipy
 tinydb
 tinyrecord
 tinydb_serialization
 ujson
-peewee

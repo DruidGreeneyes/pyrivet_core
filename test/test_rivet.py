@@ -1,7 +1,7 @@
 import pytest
 import re
 import rivet.rivet as rivet
-from lexicon.lexicon import Lexicon
+from mem_lexicon.lexicon import Lexicon
 
 
 def test_rivet():

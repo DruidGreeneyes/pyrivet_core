@@ -1,5 +1,5 @@
-from riv.dict_riv import RIV
-from riv.vec_perms import Permutations as Perms
+from .dict_riv import RIV
+from .vec_perms import Permutations as Perms
 from tinydb_serialization import Serializer
 
 

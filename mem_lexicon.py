@@ -1,9 +1,9 @@
 import functools
 import re
-from riv.dict_riv import generate_riv
-from riv.dict_riv import RIV
-from riv.vec_perms import Permutations as Perms
-from util import cached_function
+from .dict_riv import generate_riv
+from .dict_riv import RIV
+from .vec_perms import Permutations as Perms
+from .util import cached_function
 import random
 
 

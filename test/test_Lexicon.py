@@ -1,6 +1,6 @@
 import pytest
 from riv.riv import RIV
-from lexicon.lexicon import Lexicon
+from mem_lexicon.lexicon import Lexicon
 
 
 def test_lexicon():

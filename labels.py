@@ -4,8 +4,8 @@ Created on 7 May 2016
 @author: josh
 '''
 
-from riv.riv import RIV as R
-from riv.vec_perms import Permutations as P
+from .dict_riv import RIV as R
+from .vec_perms import Permutations as P
 from random import random
 
 

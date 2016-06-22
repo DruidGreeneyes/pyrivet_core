@@ -2,9 +2,11 @@ import sqlite3
 import functools
 import itertools
 import random
-from riv.dict_riv import RIV, generate_riv
-from riv.vec_perms import Permutations as Perms
-from util import cached_function
+from .dict_riv import RIV, generate_riv
+from .vec_perms import Permutations as Perms
+from .util import cached_function
+import os.path
+import os
 
 sqlite3.register_adapter(RIV, RIV.to_str)
 sqlite3.register_adapter(Perms, Perms.to_str)
@@ -16,20 +18,31 @@ def _connect(db):
     return sqlite3.connect(db, detect_types=sqlite3.PARSE_DECLTYPES)
 
 
-def _create_lexicon(db, size, nnz, overwrite):
-    if overwrite:
-        if size is None or nnz is None:
-            raise AssertionError("Cannot overwrite and create a new lexicon with missing size or nnz.")
-        lexicon_creation = "lexicon (word text, lex riv, ind riv)"
-        metadata_creation = "metadata (size integer, nnz integer, permutations permutations)"
-        with _connect(db) as conn:
-            curs = conn.cursor()
-            curs.execute("drop table if exists lexicon")
-            curs.execute("drop table if exists metadata")
-            curs.execute("create table {}".format(lexicon_creation))
-            curs.execute("create table {}".format(metadata_creation))
-            perms = Perms.generate(size)
-            curs.execute("insert into metadata (size, nnz, permutations) values (?, ?, ?)", (size, nnz, perms))
+def _create_lexicon(db, size, nnz):
+    if size is None or nnz is None:
+        raise AssertionError("Cannot create a new lexicon with missing size or nnz.")
+    lexicon_creation = "lexicon (word text, lex riv, ind riv)"
+    metadata_creation = "metadata (size integer, nnz integer, permutations permutations)"
+    with _connect(db) as conn:
+        curs = conn.cursor()
+        curs.execute("drop table if exists lexicon")
+        curs.execute("drop table if exists metadata")
+        curs.execute("create table {}".format(lexicon_creation))
+        curs.execute("create table {}".format(metadata_creation))
+        perms = Perms.generate(size)
+        curs.execute("insert into metadata (size, nnz, permutations) values (?, ?, ?)",
+                     (size, nnz, perms))
+
+
+def _open_lexicon(db, size, nnz, overwrite):
+    if os.path.isfile(db):
+        if overwrite:
+            _create_lexicon(db, size, nnz)
+    else:
+        p = os.path.split(db)[0]
+        if not os.path.isdir(p):
+            os.mkdir(p)
+        _create_lexicon(db, size, nnz)
 
 
 def _get_metadata(db):
@@ -204,6 +217,6 @@ class Lexicon(object):
         self._update_local(updates)
 
     @staticmethod
-    def open(db_path, size=None, nnz=None, overwrite=False):
-        _create_lexicon(db_path, size, nnz, overwrite)
+    def open(db_path="dbs/lexicon.db", size=None, nnz=None, overwrite=False):
+        _open_lexicon(db_path, size, nnz, overwrite)
         return Lexicon(db_path)

@@ -1,9 +1,9 @@
 import functools
 import re
-from riv.dict_riv import generate_riv
-from riv.dict_riv import RIV
-from riv.vec_perms import Permutations as Perms
-from db.serializers import RIVSerializer, PermutationSerializer
+from .dict_riv import generate_riv
+from .dict_riv import RIV
+from .vec_perms import Permutations as Perms
+from .serializers import RIVSerializer, PermutationSerializer
 from tinydb_serialization import SerializationMiddleware
 from tinydb import TinyDB, where
 from tinyrecord import transaction

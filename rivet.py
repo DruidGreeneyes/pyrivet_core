@@ -1,10 +1,9 @@
-from riv.dict_riv import generate_riv
-from riv.dict_riv import RIV
+from .dict_riv import generate_riv
+from .dict_riv import RIV
 import re
 import functools
 import itertools
 import random
-from datetime import datetime
 
 
 DEF_SENTENCE_PATTERN = re.compile(r"\.\s+")
@@ -24,6 +23,7 @@ def bulk_similarity(rivs):
     id_rivs = dict(zip(range(len(rivs)), rivs))
 
     def id_sim(id_a, id_b):
+        print("Comparing {} to {}.".format(id_rivs[id_a], id_rivs[id_b]))
         sim = similarity(id_rivs[id_a], id_rivs[id_b])
         return (id_a, id_b), sim
 
