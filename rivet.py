@@ -93,7 +93,7 @@ def process_text(text, size=1000, nnz=8, sentence_pattern=DEF_SENTENCE_PATTERN, 
     return RIV.sum(*rivs, size=size)
 
 
-def bulk_process(texts, sentence_pattern, word_pattern, size=100, nnz=4):
+def bulk_process(texts, sentence_pattern, word_pattern, size=16000, nnz=24):
     rand = random.Random()
     generate = functools.partial(generate_riv, size, nnz, rand=rand)
 
@@ -105,8 +105,12 @@ def bulk_process(texts, sentence_pattern, word_pattern, size=100, nnz=4):
 
     def process(broken_text):
         words = list(itertools.chain(*broken_text))
+        num_words = len(words)
         rivs = map(word_map.get, words)
-        return RIV.sum(*rivs, size=size)
+        sum = RIV.sum(*rivs, size=size)
+        mean_vector = sum / num_words
+        res = sum - mean_vector
+        return res
 
     rivs = map(process, broken_texts)
     return tuple(rivs)
