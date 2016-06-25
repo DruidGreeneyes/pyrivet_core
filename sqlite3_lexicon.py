@@ -197,7 +197,7 @@ class Lexicon(object):
     def _process_broken_sentence(self, broken_sentence):
         def processor(index):
             words = broken_sentence[:index] + broken_sentence[index + 1:]
-            rivs = map(self.get_lex, words)
+            rivs = map(self.get_ind, words)
             return RIV.sum(*rivs, size=self._size)
 
         indices = tuple(range(len(broken_sentence)))
