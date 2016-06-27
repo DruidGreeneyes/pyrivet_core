@@ -2,13 +2,13 @@ import itertools
 import functools
 import random
 import ujson
-import decimal
+import math
 
 
 def _make_values(rand, count):
     vals = itertools.repeat([1, -1], count // 2)
     vals = itertools.chain(*vals)
-    vals = [decimal.Decimal(x) for x in vals]
+    vals = [float(x) for x in vals]
     rand.shuffle(vals)
     return tuple(vals)
 
@@ -101,8 +101,8 @@ class RIV(dict):
         return self
 
     def magnitude(self):
-        vals = self.values()
-        return sum(i ** 2 for i in vals).sqrt()
+        tot = sum(i ** 2 for i in self.values())
+        return math.sqrt(tot)
 
     def normalize(self):
         mag = self.magnitude()
@@ -139,12 +139,12 @@ class RIV(dict):
     @staticmethod
     def from_str(string):
         size, points = ujson.loads(string)
-        points = dict((int(k), decimal.Decimal(v)) for (k, v) in points.items())
+        points = dict((int(k), float(v)) for (k, v) in points.items())
         return RIV.make(size, points)
 
     @staticmethod
-    def sum(*rivs, size=None):
-        size = size if size else len(rivs[0])
+    def sum(*rivs):
+        size = len(rivs[0])
         res = RIV.empty(size)
         for riv in rivs:
             res += riv

@@ -51,39 +51,38 @@ def compare_words(lexicon, worda, wordb):
 
 def _aggregate_words(sentence_pattern, word_pattern, *texts, distinct=True):
     def word_splitter(sentences):
-        broken_sentences = map(word_pattern.split, sentences)
-        return tuple(broken_sentences)
+        return [word_pattern.split(s) for s in sentences]
+
+    def remove_empty(broken_sentences):
+        return [s for s in broken_sentences if len(s) > 0]
 
     def chain(broken_sentences):
         return itertools.chain(*broken_sentences)
-    sentence_texts = map(sentence_pattern.split, texts)
-    broken_texts = map(word_splitter, sentence_texts)
-    broken_texts = tuple(broken_texts)
-    joined_sentences = map(chain, broken_texts)
+    sentence_texts = [sentence_pattern.split(t) for t in texts]
+    broken_texts = [word_splitter(t) for t in sentence_texts]
+    broken_texts = [remove_empty(t) for t in broken_texts]
+    joined_sentences = [chain(t) for t in broken_texts]
     joined_words = itertools.chain(*joined_sentences)
     words = set(joined_words) if distinct else tuple(joined_words)
-    words = words
     return words, broken_texts
 
 
 def deep_process_text(lexicon, text, sentence_pattern=DEF_SENTENCE_PATTERN, word_pattern=DEF_WORD_PATTERN):
     mv = lexicon.get_mean_vector()
     words = _aggregate_words(sentence_pattern, word_pattern, text, distinct=False)
-    rivs = map(lexicon.get_lex, words)
-    riv = RIV.sum(*rivs, size=lexicon._size)
+    rivs = [lexicon.get_lex(w) for w in words]
+    riv = RIV.sum(*rivs)
     return riv - mv
 
 
 def deep_process_broken(lexicon, broken_text, mv=None):
     num_sentences = len(broken_text)
-    sentence_lengths = map(len, broken_text)
-    num_words = sum(sentence_lengths)
+    words = tuple(itertools.chain(*broken_text))
+    num_words = len(words)
     print("Processing test: {} sentences, {} words.".format(num_sentences, num_words))
-    if mv is None:
-        mv = lexicon.get_mean_vector()
-    words = itertools.chain(*broken_text)
-    rivs = (lexicon.get_lex(w) for w in words)
-    riv = RIV.sum(*rivs, size=lexicon._size)
+    mv = mv if mv else lexicon.get_mean_vector()
+    rivs = [lexicon.get_lex(w) for w in words]
+    riv = RIV.sum(*rivs)
     riv -= mv
     return riv
 
@@ -93,7 +92,7 @@ def process_text(text, size=1000, nnz=8, sentence_pattern=DEF_SENTENCE_PATTERN, 
     generator = functools.partial(generate_riv, size, nnz, rand=rand)
     words = _aggregate_words(sentence_pattern, word_pattern, text, distinct=False)
     rivs = map(generator, words)
-    return RIV.sum(*rivs, size=size)
+    return RIV.sum(*rivs)
 
 
 def bulk_process(texts, sentence_pattern, word_pattern, size=16000, nnz=24):
@@ -110,7 +109,7 @@ def bulk_process(texts, sentence_pattern, word_pattern, size=16000, nnz=24):
         words = list(itertools.chain(*broken_text))
         num_words = len(words)
         rivs = map(word_map.get, words)
-        sum = RIV.sum(*rivs, size=size)
+        sum = RIV.sum(*rivs)
         mean_vector = sum / num_words
         res = sum - mean_vector
         return res
@@ -152,11 +151,11 @@ def _lex_compare_docs(lexicon, texts, ingest, sentence_pattern=DEF_SENTENCE_PATT
     return sims
 
 
-def compare_documents(*texts, lexicon=None, ingest=False, sentence_pattern=DEF_SENTENCE_PATTERN, word_pattern=DEF_WORD_PATTERN):
+def compare_documents(*texts, lexicon=None, ingest=False, size=1000, nnz=8, sentence_pattern=DEF_SENTENCE_PATTERN, word_pattern=DEF_WORD_PATTERN):
     if lexicon is not None:
         sims = _lex_compare_docs(lexicon, texts, ingest, sentence_pattern, word_pattern)
         return sims
     else:
-        rivs = bulk_process(texts, sentence_pattern, word_pattern)
+        rivs = bulk_process(texts, sentence_pattern, word_pattern, size=size, nnz=nnz)
         sims = bulk_similarity(rivs)
         return sims

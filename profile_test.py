@@ -730,16 +730,16 @@ I fear it’s also left us too little time together."""
 
     from sqlite3_lexicon import Lexicon as s_lex
     def test_sqlite():
-        with s_lex.open('dbs/test.db', 10, 2, overwrite=True) as lex:
+        with s_lex.open('dbs/test.db', 10, 5, overwrite=True) as lex:
             res1 = rivet.compare_documents(test_text_1, test_text_2, lexicon=lex, ingest=True)
-#            res2 = rivet.compare_documents(test_text_3, test_text_4, lexicon=lex, ingest=True)
-#            res3 = rivet.compare_documents(*test_text_5s, lexicon=lex, ingest=True)
+            res2 = rivet.compare_documents(test_text_3, test_text_4, lexicon=lex, ingest=True)
+            res3 = rivet.compare_documents(*test_text_5s, lexicon=lex, ingest=True)
             count = lex.count()
         print(count)
         print(res1)
-#        print(res2)
-#        for res in res3:
-#            print(res)
+        print(res2)
+        for res in res3:
+            print(res)
 
     p = cProfile.Profile()
     p.runcall(test_sqlite)

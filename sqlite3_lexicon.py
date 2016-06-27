@@ -147,7 +147,8 @@ class Lexicon(object):
             print("{} words...".format(count))
             rivs = conn.execute("select lex from lexicon").fetchall()
             rivs = [r for (r,) in rivs]
-            total_riv = RIV.sum(*rivs, size=self._size)
+            total_riv = RIV.sum(*rivs)
+            print("total riv: {}".format(total_riv))
             res = total_riv / count
             print("mean vector: {}".format(res))
             return res
@@ -200,12 +201,15 @@ class Lexicon(object):
     def _process_broken_sentence(self, broken_sentence):
         def processor(index):
             words = broken_sentence[:index] + broken_sentence[index + 1:]
-            rivs = map(self.get_ind, words)
-            return RIV.sum(*rivs, size=self._size)
+            rivs = [self.get_ind(w) for w in words]
+            return RIV.sum(*rivs)
 
-        indices = tuple(range(len(broken_sentence)))
-        rivs = map(processor, indices)
-        return zip(broken_sentence, rivs)
+        if len(broken_sentence) < 2:
+            return RIV.empty(self._size)
+        else:
+            indices = tuple(range(len(broken_sentence)))
+            rivs = [processor(i) for i in indices]
+            return tuple(zip(broken_sentence, rivs))
 
     def ingest_broken_text(self, broken_text):
         updates = _local_updates(self._generate)
@@ -213,7 +217,7 @@ class Lexicon(object):
         sentence_lengths = map(len, broken_text)
         num_words = sum(sentence_lengths)
         print("Ingesting text: {} sentences, {} words.".format(num_sentences, num_words))
-        sentence_updates = map(self._process_broken_sentence, broken_text)
+        sentence_updates = [self._process_broken_sentence(t) for t in broken_text]
         for sentence_update in sentence_updates:
             for (word, riv) in sentence_update:
                 updates[word] += riv
