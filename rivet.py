@@ -1,9 +1,11 @@
-from .dict_riv import generate_riv
-from .dict_riv import RIV
+from dict_riv import generate_riv
+from dict_riv import RIV
 import re
 import functools
 import itertools
 import random
+from decimal import getcontext
+getcontext().prec = 4
 
 
 DEF_SENTENCE_PATTERN = re.compile(r"\.\s+")
@@ -14,7 +16,7 @@ def similarity(riva, rivb):
     mag = riva.magnitude() * rivb.magnitude()
     if mag:
         d = RIV.dot_product(riva, rivb)
-        return round(d / mag, 6)
+        return d / mag
     else:
         return 0
 
@@ -79,10 +81,14 @@ def deep_process_broken(lexicon, broken_text, mv=None):
     print("Processing test: {} sentences, {} words.".format(num_sentences, num_words))
     if mv is None:
         mv = lexicon.get_mean_vector()
-    words = list(itertools.chain(*broken_text))
-    rivs = map(lexicon.get_lex, words)
+    words = itertools.chain(*broken_text)
+    rivs = (lexicon.get_lex(w) for w in words)
     riv = RIV.sum(*rivs, size=lexicon._size)
-    return riv - mv
+    print("riv: {}\n\n".format(riv))
+    print("mv: {}\n\n".format(mv))
+    riv -= mv
+    print("riv: {}\n\n".format(riv))
+    return riv
 
 
 def process_text(text, size=1000, nnz=8, sentence_pattern=DEF_SENTENCE_PATTERN, word_pattern=DEF_WORD_PATTERN):

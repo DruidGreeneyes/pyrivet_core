@@ -2,11 +2,16 @@ import itertools
 import functools
 import random
 import ujson
+import decimal
+
+
+decimal.getcontext().prec = 4
 
 
 def _make_values(rand, count):
-    vals = list(itertools.repeat([1, -1], count // 2))
-    vals = list(itertools.chain(*vals))
+    vals = itertools.repeat([1, -1], count // 2)
+    vals = itertools.chain(*vals)
+    vals = [decimal.Decimal(x) for x in vals]
     rand.shuffle(vals)
     return tuple(vals)
 
@@ -25,6 +30,7 @@ def generate_riv(size, nnz, token, rand=None):
     indices = _make_indices(r, size, nnz)
     values = _make_values(r, nnz)
     return RIV.from_sets(size, indices, values)
+
 
 class RIV(dict):
     def __init__(self, size, riv):
@@ -70,8 +76,19 @@ class RIV(dict):
         return self + -riv
 
     def __isub__(self, riv):
-        for (k, v) in riv.items():
-            self[k] -= v
+        print("Subtracting {} from {}".format(riv, self))
+        self_items = self.items()
+        items = riv.items()
+        print(items)
+        for (k, v) in items:
+            print("key: {}".format(k))
+            ov = self.__getitem__(k)
+            print("old value: {}".format(ov))
+            print("subtract: {}".format(v))
+            nv = ov - v
+            print("new value: {}".format(nv))
+            self.__setitem__(k, nv)
+            print("assigned: {}".format(self[k]))
         return self
 
     def __mul__(self, scalar):
@@ -93,13 +110,13 @@ class RIV(dict):
 
     def remove_zeros(self):
         for (k, v) in list(self.items()).copy():
-            if round(v, 6) == 0:
+            if v == 0:
                 del self[k]
         return self
 
     def magnitude(self):
         vals = self.values()
-        return sum(i ** 2 for i in vals) ** 0.5
+        return sum(i ** 2 for i in vals).sqrt()
 
     def normalize(self):
         mag = self.magnitude()
@@ -136,7 +153,7 @@ class RIV(dict):
     @staticmethod
     def from_str(string):
         size, points = ujson.loads(string)
-        points = dict((int(k), v) for k, v in points.items())
+        points = dict((k, decimal.Decimal(v)) for (k, v) in points.items())
         return RIV.make(size, points)
 
     @staticmethod
@@ -145,13 +162,9 @@ class RIV(dict):
         res = RIV.empty(size)
         for riv in rivs:
             res += riv
-#        empty_riv = RIV.empty(size)
-#        res = functools.reduce(lambda i, v: i + v,
-#                               rivs,
-#                               empty_riv)
         return res
 
     @staticmethod
     def dot_product(riva, rivb):
         res = [riva[i] * rivb[i] for i in riva if i in rivb]
-        return sum(res, 0.0)
+        return sum(res)

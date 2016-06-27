@@ -2,9 +2,9 @@ import sqlite3
 import functools
 import itertools
 import random
-from .dict_riv import RIV, generate_riv
-from .vec_perms import Permutations as Perms
-from .util import cached_function
+from dict_riv import RIV, generate_riv
+from vec_perms import Permutations as Perms
+from util import cached_function
 import os.path
 import os
 
