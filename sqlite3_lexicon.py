@@ -144,10 +144,13 @@ class Lexicon(object):
         print("updating mean vector...")
         with _connect(self._db) as conn:
             count = self.count(conn=conn)
+            print("{} words...".format(count))
             rivs = conn.execute("select lex from lexicon").fetchall()
             rivs = [r for (r,) in rivs]
             total_riv = RIV.sum(*rivs, size=self._size)
-            return total_riv / count
+            res = total_riv / count
+            print("mean vector: {}".format(res))
+            return res
 
     def _update_local(self, updates):
         for (w, r) in updates.items():

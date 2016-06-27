@@ -5,9 +5,6 @@ import ujson
 import decimal
 
 
-decimal.getcontext().prec = 4
-
-
 def _make_values(rand, count):
     vals = itertools.repeat([1, -1], count // 2)
     vals = itertools.chain(*vals)
@@ -76,19 +73,8 @@ class RIV(dict):
         return self + -riv
 
     def __isub__(self, riv):
-        print("Subtracting {} from {}".format(riv, self))
-        self_items = self.items()
-        items = riv.items()
-        print(items)
-        for (k, v) in items:
-            print("key: {}".format(k))
-            ov = self.__getitem__(k)
-            print("old value: {}".format(ov))
-            print("subtract: {}".format(v))
-            nv = ov - v
-            print("new value: {}".format(nv))
-            self.__setitem__(k, nv)
-            print("assigned: {}".format(self[k]))
+        for (k, v) in riv.items():
+            self[k] -= v
         return self
 
     def __mul__(self, scalar):
@@ -153,7 +139,7 @@ class RIV(dict):
     @staticmethod
     def from_str(string):
         size, points = ujson.loads(string)
-        points = dict((k, decimal.Decimal(v)) for (k, v) in points.items())
+        points = dict((int(k), decimal.Decimal(v)) for (k, v) in points.items())
         return RIV.make(size, points)
 
     @staticmethod

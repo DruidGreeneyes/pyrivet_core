@@ -5,7 +5,7 @@ import functools
 import itertools
 import random
 from decimal import getcontext
-getcontext().prec = 4
+getcontext().prec = 8
 
 
 DEF_SENTENCE_PATTERN = re.compile(r"\.\s+")
@@ -84,10 +84,7 @@ def deep_process_broken(lexicon, broken_text, mv=None):
     words = itertools.chain(*broken_text)
     rivs = (lexicon.get_lex(w) for w in words)
     riv = RIV.sum(*rivs, size=lexicon._size)
-    print("riv: {}\n\n".format(riv))
-    print("mv: {}\n\n".format(mv))
     riv -= mv
-    print("riv: {}\n\n".format(riv))
     return riv
 
 
